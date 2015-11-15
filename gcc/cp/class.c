@@ -6853,6 +6853,41 @@ check_flexarrays (tree t, flexmems_t *fmem /* = NULL */)
     }
 }
 
+/* Returns true if TYPE is POD of one-byte or less in size for the purpose
+   of layout and an empty class or an class with empty class.  */
+
+static bool
+is_empty_record (tree type)
+{
+  if (type == error_mark_node)
+    return false;
+
+  if (!CLASS_TYPE_P (type))
+    return false;
+
+  if (CLASSTYPE_NON_LAYOUT_POD_P (type))
+    return false;
+
+  gcc_assert (COMPLETE_TYPE_P (type));
+
+  if (CLASSTYPE_EMPTY_P (type))
+    return true;
+
+  if (int_size_in_bytes (type) > 1)
+    return false;
+
+  tree field;
+
+  for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
+    if (TREE_CODE (field) == FIELD_DECL
+	&& !DECL_ARTIFICIAL (field)
+	&& !is_empty_record (TREE_TYPE (field)))
+      return false;
+
+  return true;
+}
+
+
 /* Perform processing required when the definition of T (a class type)
    is complete.  Diagnose invalid definitions of flexible array members
    and zero-size arrays.  */
@@ -7063,6 +7098,9 @@ finish_struct_1 (tree t)
 	  TYPE_TRANSPARENT_AGGR (t) = 0;
 	}
     }
+
+  if (abi_version_at_least (10))
+    TYPE_EMPTY_RECORD (t) = is_empty_record (t);
 }
 
 /* Insert FIELDS into T for the sorted case if the FIELDS count is
