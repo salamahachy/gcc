@@ -3,7 +3,7 @@
 // { dg-require-effective-target fpic }
 
 struct dummy { };
-struct true_type { struct dummy i; struct dummy j; };
+struct true_type { struct dummy i[120]; };
 
 extern true_type y;
 extern void xxx (true_type c);

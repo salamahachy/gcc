@@ -1,7 +1,7 @@
 // { dg-do compile }
 // { dg-options "-O2" }
 
-struct dummy { struct{}__attribute__((aligned (4))) a[7]; };
+struct dummy { struct{} a[7][3]; };
 
 extern void test1 (struct dummy, ...);
 extern void (*test2) (struct dummy, ...);

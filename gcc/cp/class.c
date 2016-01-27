@@ -6853,8 +6853,30 @@ check_flexarrays (tree t, flexmems_t *fmem /* = NULL */)
     }
 }
 
-/* Returns true if TYPE is POD of one-byte or less in size for the purpose
-   of layout and an empty class or an class with empty class.  */
+static bool
+is_really_empty_record (tree type)
+{
+  if (CLASS_TYPE_P (type))
+    {
+      if (CLASSTYPE_EMPTY_P (type))
+	return true;
+
+      tree field;
+
+      for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
+	if (TREE_CODE (field) == FIELD_DECL
+	    && !DECL_ARTIFICIAL (field)
+	    && !is_really_empty_record (TREE_TYPE (field)))
+	  return false;
+    }
+  else if (TREE_CODE (type) == ARRAY_TYPE)
+    return is_really_empty_record (TREE_TYPE (type));
+  return false;
+}
+
+/* Returns true if TYPE is POD for the purpose of layout and
+   1. An empty class.  Or
+   2. A class with empty classes or array of empty classes.  */
 
 static bool
 is_empty_record (tree type)
@@ -6873,15 +6895,12 @@ is_empty_record (tree type)
   if (CLASSTYPE_EMPTY_P (type))
     return true;
 
-  if (int_size_in_bytes (type) > 1)
-    return false;
-
   tree field;
 
   for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
     if (TREE_CODE (field) == FIELD_DECL
 	&& !DECL_ARTIFICIAL (field)
-	&& !is_empty_record (TREE_TYPE (field)))
+	&& !is_really_empty_record (TREE_TYPE (field)))
       return false;
 
   return true;
