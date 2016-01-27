@@ -6853,8 +6853,15 @@ check_flexarrays (tree t, flexmems_t *fmem /* = NULL */)
     }
 }
 
+/* An empty record is:
+   1. A class without member.  Or
+   2. An array of empty records.  Or
+   3. A class with empty records.  */
+
+/* Returns true if TYPE is an empty class or an array of empty classes.  */
+
 static bool
-is_really_empty_record (tree type)
+is_empty_record_or_array_of_empty_record (tree type)
 {
   if (CLASS_TYPE_P (type))
     {
@@ -6866,20 +6873,21 @@ is_really_empty_record (tree type)
       for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
 	if (TREE_CODE (field) == FIELD_DECL
 	    && !DECL_ARTIFICIAL (field)
-	    && !is_really_empty_record (TREE_TYPE (field)))
+	    && !is_empty_record_or_array_of_empty_record (TREE_TYPE (field)))
 	  return false;
+      return true;
     }
   else if (TREE_CODE (type) == ARRAY_TYPE)
-    return is_really_empty_record (TREE_TYPE (type));
+    return is_empty_record_or_array_of_empty_record (TREE_TYPE (type));
   return false;
 }
 
 /* Returns true if TYPE is POD for the purpose of layout and
-   1. An empty class.  Or
-   2. A class with empty classes or array of empty classes.  */
+   1. A class without member.  Or
+   2. A class with empty records.  */
 
 static bool
-is_empty_record (tree type)
+is_empty_record_for_parm (tree type)
 {
   if (type == error_mark_node)
     return false;
@@ -6900,7 +6908,7 @@ is_empty_record (tree type)
   for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
     if (TREE_CODE (field) == FIELD_DECL
 	&& !DECL_ARTIFICIAL (field)
-	&& !is_really_empty_record (TREE_TYPE (field)))
+	&& !is_empty_record_or_array_of_empty_record (TREE_TYPE (field)))
       return false;
 
   return true;
@@ -7119,7 +7127,7 @@ finish_struct_1 (tree t)
     }
 
   if (abi_version_at_least (10))
-    TYPE_EMPTY_RECORD (t) = is_empty_record (t);
+    TYPE_EMPTY_RECORD (t) = is_empty_record_for_parm (t);
 }
 
 /* Insert FIELDS into T for the sorted case if the FIELDS count is
